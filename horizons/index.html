@@ -1075,12 +1075,18 @@ body:not(.has-subjects) .subjects-only,body:not(.has-fees) .fees-only,body:not(.
 .fee-summary strong{display:block;margin-top:8px;font-size:30px;font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--heading);font-variant-numeric:tabular-nums}
 .fee-summary small{margin-left:6px;font-size:15px;font-weight:500;letter-spacing:0;color:var(--text-3)}
 .fee-list{padding-top:6px;padding-bottom:8px}
-.fee-row{display:grid;grid-template-columns:auto minmax(0,1fr) 140px 128px;grid-template-areas:"av who amt tick";align-items:center;gap:10px 14px;padding:12px 0}
+.fee-row{display:grid;grid-template-columns:auto minmax(0,1fr) 168px 130px minmax(128px,auto);grid-template-areas:"av who for amt tick";align-items:center;gap:10px 14px;padding:12px 0}
 .fee-row + .fee-row{border-top:1px solid var(--line)}
 .fee-row > .avatar{grid-area:av}
 .fee-who{grid-area:who;min-width:0;display:flex;flex-direction:column}
 .fee-who .row-sub{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fee-amount{grid-area:amt;position:relative;display:block}
+.fee-for{grid-area:for;position:relative;display:block}
+.fee-for span{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:var(--text-3);pointer-events:none}
+.fee-for .input{height:42px;padding-left:44px;padding-right:30px;font-size:14.5px}
+.fee-summary small.fee-in{display:block;margin:10px 0 0;font-size:14px;line-height:1.45;letter-spacing:0}
+.fee-owes{align-self:flex-start;margin-top:5px;padding:2px 9px;border-radius:999px;font-size:13px;font-weight:600;color:#a34a12;background:#fdf0e6;border:1px solid #f3d3bb}
+:root[data-theme="dark"] .fee-owes{color:#f2b48a;background:rgba(242,180,138,.1);border-color:rgba(242,180,138,.25)}
 .fee-amount span{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-weight:600;color:var(--text-3);pointer-events:none}
 .fee-amount .input{height:42px;padding-left:28px;font-variant-numeric:tabular-nums}
 .fee-tick{grid-area:tick;display:inline-flex;align-items:center;justify-content:flex-start;gap:9px;height:42px;padding:0 14px 0 11px;border-radius:999px;border:1.5px solid var(--line-2);background:var(--surface);font-size:14.5px;font-weight:600;color:var(--text-2);transition:background .15s,border-color .15s,color .15s}
@@ -1106,7 +1112,10 @@ body:not(.has-subjects) .subjects-only,body:not(.has-fees) .fees-only,body:not(.
   .fee-summary > div{padding:14px 14px}
   .fee-summary strong{font-size:24px}
   .fee-summary small{display:block;margin:4px 0 0;font-size:13px}
-  .fee-row{grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"av who tick" "av amt amt"}
+  .fee-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"who tick" "for amt"}
+  .fee-row > .avatar{display:none}
+  .fee-row .fee-tick{justify-self:end}
+  .fee-owes{border-radius:8px}
   .fee-months{padding:6px 18px 20px;gap:6px}
   .month-step{width:100%;justify-content:space-between}
 }
@@ -2030,7 +2039,7 @@ body:not(.has-homework) .homework-only{display:none !important}
         <header class="page-head">
           <div>
             <h1 class="page-title">Fees</h1>
-            <p class="page-sub">Tick each student once they've paid for the month, and note how much.</p>
+            <p class="page-sub">Tick each student once they've paid, and note how much. If a payment is for an earlier month, choose that month under For before you tick.</p>
           </div>
           <div class="head-actions">
             <div class="month-step" role="group" aria-label="Month">
@@ -2112,7 +2121,7 @@ body:not(.has-homework) .homework-only{display:none !important}
             <p class="page-sub">Every lesson you've recorded, newest first.</p>
           </div>
           <div class="head-actions">
-            <label class="filter staff-only" id="history-class-wrap" hidden><span>Class</span><select id="history-class" class="input" onchange="renderHistory()"><option value="">All classes</option></select></label>
+            <label class="filter staff-only" id="history-class-wrap" hidden><span>Class</span><select id="history-class" class="input" onchange="syncHistoryStudents(); renderHistory()"><option value="">All classes</option></select></label>
             <label class="filter"><span>Showing</span><select id="history-filter" class="input" onchange="renderHistory()"><option value="">All students</option></select></label>
           </div>
         </header>
@@ -2582,7 +2591,7 @@ const HIJRI_MONTHS = ['Muharram', 'Safar', 'Rabi‘ al-Awwal', 'Rabi‘ al-Thani
 
 // ── State ──
 const state = { students: [], sessions: [], classes: [], enrolments: [], guardians: [], guardiansOn: false, members: [], classTeachers: [], invites: [], requests: [],
-  me: null, role: null, orgId: null, ratings: { mem: 0, rev: 0, rec: 0, qd: 0 }, selectedBehaviour: '', currentStudentId: null, currentSessionId: null, currentPage: 'dashboard', homework: [], hwMissing: false, hwTouched: false,
+  me: null, role: null, orgId: null, ratings: { mem: 0, rev: 0, rec: 0, qd: 0 }, selectedBehaviour: '', currentStudentId: null, currentSessionId: null, currentPage: 'dashboard', homework: [], hwMissing: false, hwTouched: false, feeFor: {}, feeJust: {},
   register: { classId: '', date: '', marks: {}, saved: {} }, recentAttendance: [], registrations: [], fees: [], feeMonth: '', welcomeRole: 'teacher', userEmail: '', heroDrawn: false, editingStudentId: null, reportStudentId: null, recovering: RECOVERY_LINK, passwordJustUsed: false };
 
 // ── Small helpers ──
@@ -3328,14 +3337,28 @@ function declineRegistration(id) {
     toast('Registration declined');
   });
 }
+// A student filter lists only the students in the chosen class, and lets go of a student who isn't in it
+function fillStudentFilter(sel, classId, allLabel) {
+  const cur = sel.value, list = classId ? studentsInClass(classId) : state.students;
+  sel.innerHTML = `<option value="">${esc(allLabel)}</option>` + list.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  sel.value = cur && list.some(s => s.id === cur) ? cur : '';
+}
+function syncHistoryStudents() {
+  const cls = $('history-class').value;
+  fillStudentFilter($('history-filter'), cls, state.role === 'parent' ? 'All your children' : cls ? 'Everyone in this class' : 'All students');
+}
+// While something is saving, its button waits, so a double click or a second Enter can't save it twice
+const saving = new Set();
+async function once(key, btn, fn) {
+  if (saving.has(key)) return;
+  saving.add(key); if (btn) btn.disabled = true;
+  try { return await fn(); } finally { saving.delete(key); if (btn) btn.disabled = false; }
+}
 function renderStudentSelects() {
   const opts = state.students.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
   const sel = $('session-student'); const cur = sel.value;
   sel.innerHTML = '<option value="">Select a student</option>' + opts;
   if (cur && getStudent(cur)) sel.value = cur;
-  const hsel = $('history-filter'); const hcur = hsel.value;
-  hsel.innerHTML = `<option value="">${state.role === 'parent' ? 'All your children' : 'All students'}</option>` + opts;
-  if (hcur && getStudent(hcur)) hsel.value = hcur;
   // class filters
   const classOpts = state.classes.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   const hasLoose = state.role === 'admin' && state.students.some(st => !classIdsOf(st.id).length);
@@ -3347,6 +3370,7 @@ function renderStudentSelects() {
   const showFilters = state.role !== 'parent' && (state.classes.length > 1 || hasLoose);
   $('student-class-wrap').hidden = !showFilters;
   $('history-class-wrap').hidden = !(state.role !== 'parent' && state.classes.length > 1);
+  syncHistoryStudents();
   $('no-students-note').hidden = state.students.length > 0;
   updateSaveBar();
 }
@@ -3522,7 +3546,8 @@ function studentFormValues() {
     collection_notes: v('sf-collect'), photo_consent: photo === 'yes' ? true : photo === 'no' ? false : null
   };
 }
-async function saveStudentForm() {
+function saveStudentForm(opts) { return once('student', $('sf-save'), () => saveStudentFormNow(opts || {})); }
+async function saveStudentFormNow(opts) {
   const f = studentFormValues();
   const need = [['sf-name', f.name, 'the student’s name'], ['sf-contact-name', f.contact_name, 'a main contact'], ['sf-contact-phone', f.contact_phone, 'a phone number for the main contact']];
   const gap = need.find(([, value]) => !value);
@@ -3536,6 +3561,14 @@ async function saveStudentForm() {
   if (!id) {
     const classId = $('sf-class').value;
     if (!classId) { toast('Choose a class for them first', 'warn'); return; }
+    // Someone with the same name already here is usually the same child, added twice
+    const twin = !opts.twinOk && state.students.find(s => s.name.trim().toLowerCase().replace(/\s+/g, ' ') === f.name.toLowerCase().replace(/\s+/g, ' '));
+    if (twin) {
+      const where = classIdsOf(twin.id).map(c => (classById(c) || {}).name).filter(Boolean).join(' and ');
+      showConfirmStep({ title: `${twin.name} is already here`, message: `There’s already a student called ${twin.name}${where ? ' in ' + where : ''}. If it’s the same child, keep the one you have and add them to another class from their page. Add a second ${twin.name} only if it’s a different child.`,
+        label: 'Add a different child', icon: 'plus', tone: 'primary', cancel: 'Go back' }, () => saveStudentForm({ twinOk: true }));
+      return;
+    }
     const { data: newId, error } = await db.rpc('add_student', { p_class_id: classId, p_student: Object.assign({}, f, { give_parent_access: access }) });
     if (error) { toast(error.message, 'warn'); return; }
     if (onQd && newId) {
@@ -3789,6 +3822,25 @@ function stepFeeMonth(n) {
   renderFees();
 }
 function openFees(month) { if (month) state.feeMonth = month; showPage('fees'); }
+// The months a payment can be for: half a year back and two ahead, and always the month being shown
+function feeMonthChoices(key) {
+  const now = new Date(), out = [];
+  for (let i = -6; i <= 2; i++) out.push(monthKey(new Date(now.getFullYear(), now.getMonth() + i, 1)));
+  if (!out.includes(key)) out.push(key);
+  return out.sort();
+}
+// Earlier months a student hasn't paid for, from when they started and at most three months back
+function feeOwed(st, key) {
+  const [y, m] = key.split('-').map(Number), start = parseDate(st.startDate), out = [];
+  for (let i = 3; i >= 1; i--) {
+    const d = new Date(y, m - 1 - i, 1);
+    if (start && d < new Date(start.getFullYear(), start.getMonth(), 1)) continue;
+    if (!feeFor(st.id, monthKey(d))) out.push(monthKey(d));
+  }
+  return out;
+}
+// Payments received in this month that were for another month
+const feesReceivedIn = key => state.fees.filter(f => String(f.paid_on).slice(0, 7) === key);
 function renderFees() {
   if (!state.feeMonth) state.feeMonth = monthKey();
   const key = state.feeMonth;
@@ -3801,9 +3853,12 @@ function renderFees() {
   if (sel.value) list = list.filter(st => classIdsOf(st.id).includes(sel.value));
   const paid = list.filter(st => feeFor(st.id, key));
   const total = paid.reduce((t, st) => t + (Number(feeFor(st.id, key).amount) || 0), 0);
+  const ids = new Set(list.map(st => st.id)), received = feesReceivedIn(key).filter(f => ids.has(f.student_id));
+  const receivedTotal = received.reduce((t, f) => t + (Number(f.amount) || 0), 0);
+  const late = received.filter(f => String(f.period).slice(0, 7) !== key);
   $('fee-summary').innerHTML = `
     <div><span>Paid</span><strong>${paid.length}<small>of ${list.length}</small></strong></div>
-    <div><span>Collected</span><strong>${money(total) || '£0'}</strong></div>
+    <div><span>Collected</span><strong>${money(total) || '£0'}${late.length ? `<small class="fee-in">${money(receivedTotal) || '£0'} came in this month, ${late.length === 1 ? 'one payment' : plural(late.length, 'payment')} for other months</small>` : ''}</strong></div>
     <div><span>Still to pay</span><strong>${list.length - paid.length}${(n => n && FEATURES.reminders ? `<small>${n} reminded</small>` : '')(list.filter(st => !feeFor(st.id, key) && remindersFor(st.id, key).length).length)}</strong></div>`;
   const show = $('fee-show').value;
   if (show) list = list.filter(st => show === 'paid' ? feeFor(st.id, key) : !feeFor(st.id, key));
@@ -3816,28 +3871,51 @@ function renderFees() {
     const f = feeFor(st.id, key);
     const cls = classIdsOf(st.id).map(c => (classById(c) || {}).name).filter(Boolean).join(', ') || 'Not in a class';
     const note = f || !FEATURES.reminders ? '' : reminderNote(st.id, key);
-    const sub = f ? `${esc(cls)}, paid ${relDate(f.paid_on, true)}` : `${esc(cls)}${note ? ', ' + note : ''}`;
+    const other = !f && state.fees.filter(x => x.student_id === st.id && String(x.paid_on).slice(0, 7) === key && String(x.period).slice(0, 7) !== key)
+      .map(x => `paid for ${monthLabel(String(x.period).slice(0, 7), { month: 'long' })} ${relDate(x.paid_on, true)}`);
+    const owed = feeOwed(st, key);
+    const sub = f ? `${esc(cls)}, paid ${relDate(f.paid_on, true)}` : `${esc(cls)}${other.length ? ', ' + other.join(', ') : ''}${note ? ', ' + note : ''}`;
+    const owes = owed.length ? `<span class="fee-owes">Still owes ${owed.map(k => monthLabel(k, { month: 'long' })).join(', ')}</span>` : '';
+    const forKey = f ? key : (state.feeFor[st.id] || key);
+    const forSel = `<label class="fee-for"><span>For</span><select class="input" aria-label="Month this payment is for, ${esc(st.name)}" onchange="chooseFeeMonth('${st.id}', this.value)">
+      ${feeMonthChoices(key).map(k => `<option value="${k}"${k === forKey ? ' selected' : ''}${!f && k !== key && feeFor(st.id, k) ? ' disabled' : ''}>${monthLabel(k, { month: 'short', year: 'numeric' })}${!f && k !== key && feeFor(st.id, k) ? ', paid' : ''}</option>`).join('')}</select></label>`;
     const wa = !f && FEATURES.reminders && waNumber(phoneOf(st)) ? `<button type="button" class="link-btn fee-wa" onclick="whatsappReminder('${st.id}')" aria-label="WhatsApp reminder for ${esc(st.name)}">${ic('chat')}WhatsApp<span class="fee-wa-more"> reminder</span></button>` : '';
     return `<div class="fee-row${f ? ' paid' : ''}" data-student="${st.id}">
       ${avatar(st.name)}
-      <div class="fee-who"><span class="row-title">${esc(st.name)}</span><span class="row-sub">${sub}</span>${wa}</div>
+      <div class="fee-who"><span class="row-title">${esc(st.name)}</span><span class="row-sub">${sub}</span>${owes}${wa}</div>
+      ${forSel}
       <label class="fee-amount"><span aria-hidden="true">£</span><input type="text" class="input" inputmode="decimal" autocomplete="off" placeholder="Amount"
         value="${f && f.amount != null ? Number(f.amount).toFixed(Number(f.amount) % 1 ? 2 : 0) : ''}" aria-label="Amount ${esc(st.name)} paid"
         onchange="saveFeeAmount('${st.id}', this)" onkeydown="if (event.key === 'Enter') this.blur()"></label>
-      <button type="button" class="fee-tick" role="checkbox" aria-checked="${f ? 'true' : 'false'}" aria-label="${esc(st.name)} has paid for ${monthLabel(key)}" onclick="toggleFeePaid('${st.id}')">
-        <span class="box">${ic('check')}</span>${f ? 'Paid' : 'Not paid'}</button>
+      <button type="button" class="fee-tick" role="checkbox" aria-checked="${f ? 'true' : 'false'}" aria-label="${esc(st.name)} has paid for ${monthLabel(forKey)}" onclick="toggleFeePaid('${st.id}')">
+        <span class="box">${ic('check')}</span>${f ? 'Paid' : forKey !== key ? `Paid for ${monthLabel(forKey, { month: 'short' })}?` : 'Not paid'}</button>
     </div>`;
   }).join('');
 }
-async function upsertFee(studentId, amount) {
-  const key = state.feeMonth, f = feeFor(studentId, key);
+// Choosing the month: before ticking, it's the month the payment will be for; once paid, it moves the payment there
+async function chooseFeeMonth(studentId, k) {
+  const key = state.feeMonth, f = feeFor(studentId, key), st = getStudent(studentId);
+  if (!f) { state.feeFor[studentId] = k; renderFees(); return; }
+  if (k === key) return;
+  if (feeFor(studentId, k)) { toast(`${st.name} has already paid for ${monthLabel(k, { month: 'long' })}`, 'warn'); renderFees(); return; }
+  const { data, error } = await db.from('fee_payments').update({ period: k + '-01' }).eq('id', f.id).select('id, student_id, period, amount, paid_on').single();
+  if (error || !data) { toast('That payment couldn’t be moved' + (error ? ': ' + error.message : ''), 'warn'); renderFees(); return; }
+  state.fees = state.fees.filter(x => x.id !== f.id).concat(data);
+  renderFees();
+  toast(`${st.name}’s payment is now for ${monthLabel(k, { month: 'long' })}`);
+}
+async function upsertFee(studentId, amount, forKey) {
+  const key = forKey || state.feeMonth, f = feeFor(studentId, key);
   const row = { student_id: studentId, period: key + '-01', amount, paid_on: f ? f.paid_on : localISO() };
   const { data, error } = await db.from('fee_payments').upsert(row, { onConflict: 'student_id,period' }).select('id, student_id, period, amount, paid_on').single();
   if (error) { toast('That payment couldn’t be saved: ' + error.message, 'warn'); return false; }
   state.fees = state.fees.filter(x => !(x.student_id === studentId && String(x.period).slice(0, 7) === key)).concat(data);
   return true;
 }
-async function toggleFeePaid(studentId) {
+function toggleFeePaid(studentId) { return once('fee-' + studentId, null, () => toggleFeePaidNow(studentId)); }
+async function toggleFeePaidNow(studentId) {
+  // Typing an amount and then ticking saves once: the amount already recorded the payment
+  if (Date.now() - (state.feeJust[studentId] || 0) < 2000) { delete state.feeJust[studentId]; return; }
   const key = state.feeMonth, f = feeFor(studentId, key), st = getStudent(studentId);
   const input = document.querySelector(`.fee-row[data-student="${studentId}"] .fee-amount .input`);
   if (f) {
@@ -3850,7 +3928,12 @@ async function toggleFeePaid(studentId) {
   }
   const amount = parseMoney(input ? input.value : '');
   if (amount === undefined) { toast('Check the amount, for example 30 or 27.50', 'warn'); if (input) input.focus(); return; }
-  if (await upsertFee(studentId, amount)) { renderFees(); toast(`${st.name} has paid for ${monthLabel(key, { month: 'long' })}`); }
+  const forKey = state.feeFor[studentId] || key;
+  if (await upsertFee(studentId, amount, forKey)) {
+    delete state.feeFor[studentId];
+    renderFees();
+    toast(forKey === key ? `${st.name} has paid for ${monthLabel(key, { month: 'long' })}` : `${st.name} has paid for ${monthLabel(forKey, { month: 'long' })}, received today`);
+  }
 }
 function parseMoney(text) {
   const t = String(text).replace(/[£,\s]/g, '');
@@ -3859,13 +3942,20 @@ function parseMoney(text) {
   return Number(t);
 }
 async function saveFeeAmount(studentId, input) {
-  const amount = parseMoney(input.value), f = feeFor(studentId, state.feeMonth);
+  return once('fee-' + studentId, null, () => saveFeeAmountNow(studentId, input));
+}
+async function saveFeeAmountNow(studentId, input) {
+  const forKey = feeFor(studentId, state.feeMonth) ? state.feeMonth : (state.feeFor[studentId] || state.feeMonth);
+  const amount = parseMoney(input.value), f = feeFor(studentId, forKey);
   if (amount === undefined) { toast('Check the amount, for example 30 or 27.50', 'warn'); input.focus(); return; }
   if (!f && amount === null) return;
   if (f && Number(f.amount) === amount) return;
-  if (await upsertFee(studentId, amount)) {
+  if (await upsertFee(studentId, amount, forKey)) {
+    if (!f) state.feeJust[studentId] = Date.now();
+    if (forKey !== state.feeMonth) delete state.feeFor[studentId];
     renderFees();
-    toast(amount === null ? 'Amount cleared' : `${money(amount)} saved for ${getStudent(studentId).name}`);
+    toast(amount === null ? 'Amount cleared' : f ? `${money(amount)} saved for ${getStudent(studentId).name}`
+      : `${getStudent(studentId).name} has paid ${money(amount)} for ${monthLabel(forKey, { month: 'long' })}${forKey !== state.feeMonth ? ', received today' : ''}`);
   }
 }
 function feesCard(st) {
@@ -3932,7 +4022,8 @@ function markAll(mark) {
   studentsInClass(state.register.classId).forEach(st => { if (!state.register.marks[st.id]) state.register.marks[st.id] = mark; });
   renderRegister();
 }
-async function saveRegister() {
+function saveRegister() { return once('register', document.querySelector('#page-register .save-bar .btn-accent'), saveRegisterNow); }
+async function saveRegisterNow() {
   const { classId, date, marks } = state.register;
   if (!classId) { toast('Choose a class first', 'warn'); return; }
   const kids = studentsInClass(classId);
@@ -3948,7 +4039,8 @@ async function saveRegister() {
 }
 
 // ── Log a session ──
-async function saveSession() {
+function saveSession() { return once('lesson', document.querySelector('#page-log-session .save-bar .btn-accent'), saveSessionNow); }
+async function saveSessionNow() {
   const studentId = $('session-student').value;
   const date = $('session-date').value;
   if (!studentId) { toast('Choose which student this lesson was with', 'warn'); $('session-student').focus(); return; }
@@ -5882,13 +5974,13 @@ function resetHomeworkCard() {
 function hwStudentNote() {
   if (!FEATURES.homework) return;
   const st = getStudent($('session-student').value);
-  const qd = !(FEATURES.qaidah && st && st.qaidah && st.qaidah.on);
-  $('hw-qd-wrap').hidden = qd; $('hw-qd-place-wrap').hidden = qd;
+  $('hw-qd-wrap').hidden = !FEATURES.qaidah; $('hw-qd-place-wrap').hidden = !FEATURES.qaidah;
   const last = st && (state.homework || []).find(h => h.studentId === st.id);
   $('hw-last').innerHTML = last ? `Last set ${relDate(last.setOn, true)}: ${esc(hwSummary(last))}.` : '';
   $('hw-last').hidden = !last;
 }
-async function assignHomework() {
+function assignHomework() { return once('homework', $('hw-assign'), assignHomeworkNow); }
+async function assignHomeworkNow() {
   const studentId = $('session-student').value;
   if (!studentId) { toast('Choose which student the homework is for', 'warn'); $('session-student').focus(); return; }
   const st = getStudent(studentId);
@@ -5975,12 +6067,11 @@ function removeHomework(id) {
 // ── The Homework page ──
 function renderHomework() {
   const box = $('hw-list'); if (!box) return;
-  const sel = $('hw-filter'), cur = sel.value;
-  sel.innerHTML = `<option value="">${state.role === 'parent' ? (state.students.length === 1 ? 'Your child' : 'All your children') : 'All students'}</option>` + state.students.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
-  if (cur && getStudent(cur)) sel.value = cur;
   const cs = $('hw-class'), ccur = cs.value;
   cs.innerHTML = '<option value="">All classes</option>' + state.classes.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
   if (state.classes.some(c => c.id === ccur)) cs.value = ccur;
+  const sel = $('hw-filter');
+  fillStudentFilter(sel, cs.value, state.role === 'parent' ? (state.students.length === 1 ? 'Your child' : 'All your children') : cs.value ? 'Everyone in this class' : 'All students');
   $('hw-class-wrap').hidden = !(state.role !== 'parent' && state.classes.length > 1);
   $('hw-filter-wrap').hidden = state.students.length < 2;
   if (state.hwMissing) { box.innerHTML = `<div class="card">${emptyState('Homework needs a database update', 'Run quran-portal-update-12.sql in Supabase, then open this page again.')}</div>`; return; }
